@@ -127,6 +127,8 @@ pub struct World {
     pub dimension_type: DimensionType,
     /// The world's weather, including rain and thunder levels
     pub weather: Mutex<Weather>,
+    /// Scheduled block ticks
+    pub scheduled_block_ticks: Mutex<Vec<(usize, BlockPos)>>,
     // TODO: entities
 }
 
@@ -142,6 +144,7 @@ impl World {
             level_time: Mutex::new(LevelTime::new()),
             dimension_type,
             weather: Mutex::new(Weather::new()),
+            scheduled_block_ticks: Mutex::new(Vec::new()),
         }
     }
 
@@ -310,6 +313,23 @@ impl World {
                 entity.on_player_collision(player).await;
             }
         }
+
+        // scheduled block ticks
+        let mut scheduled_block_ticks = self.scheduled_block_ticks.lock().await;
+        for (delay, pos) in scheduled_block_ticks.iter_mut() {
+            *delay -= 1;
+            if *delay == 0 {
+                let block = self.get_block_and_block_state(pos).await;
+                if let Ok(block) = block {
+                    let pumpkin_block = server.block_registry.get_pumpkin_block(&block.0);
+                    if let Some(pumpkin_block) = pumpkin_block {
+                        pumpkin_block.scheduled_tick(block.0, block.1, server, self, pos).await;
+                    }
+                }
+            }
+        }
+
+        scheduled_block_ticks.retain(|(delay, _)| *delay > 0);
     }
 
     /// Gets the y position of the first non air block from the top down
@@ -1171,5 +1191,10 @@ impl World {
     > {
         let id = self.get_block_state_id(position).await?;
         get_block_and_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+    }
+
+    pub async fn schedule_block_tick(&self, pos: &BlockPos, delay: usize) {
+        let mut scheduled_block_ticks = self.scheduled_block_ticks.lock().await;
+        scheduled_block_ticks.push((delay, pos.clone()));
     }
 }

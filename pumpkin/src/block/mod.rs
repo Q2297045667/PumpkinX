@@ -1,21 +1,8 @@
-use blocks::{chest::ChestBlock, furnace::FurnaceBlock, lever::LeverBlock, tnt::TNTBlock};
+use blocks::{
+    button::ButtonBlock, chest::ChestBlock, furnace::FurnaceBlock, lever::LeverBlock, redstone_wire::RedstoneWireBlock, tnt::TNTBlock
+};
 use properties::{
-    BlockPropertiesManager,
-    age::Age,
-    attachment::Attachment,
-    axis::Axis,
-    cardinal::{Down, East, North, South, Up, West},
-    face::Face,
-    facing::Facing,
-    half::Half,
-    layers::Layers,
-    open::Open,
-    powered::Powered,
-    signal_fire::SignalFire,
-    slab_type::SlabType,
-    stair_shape::StairShape,
-    unstable::Unstable,
-    waterlog::Waterlogged,
+    age::Age, attachment::Attachment, axis::Axis, cardinal::{Down, East, North, South, Up, West}, face::Face, facing::Facing, half::Half, layers::Layers, open::Open, power::Power, powered::Powered, signal_fire::SignalFire, slab_type::SlabType, stair_shape::StairShape, unstable::Unstable, waterlog::Waterlogged, BlockPropertiesManager
 };
 use pumpkin_data::entity::EntityType;
 use pumpkin_data::item::Item;
@@ -48,6 +35,8 @@ pub fn default_registry() -> Arc<BlockRegistry> {
     manager.register(ChestBlock);
     manager.register(TNTBlock);
     manager.register(LeverBlock);
+    manager.register(ButtonBlock);
+    manager.register(RedstoneWireBlock);
 
     Arc::new(manager)
 }
@@ -111,6 +100,7 @@ pub fn default_block_properties_manager() -> Arc<BlockPropertiesManager> {
     manager.register(Up::False);
     manager.register(Waterlogged::False());
     manager.register(West::False);
+    manager.register(Power::Level0);
 
     manager.build_properties_registry();
 

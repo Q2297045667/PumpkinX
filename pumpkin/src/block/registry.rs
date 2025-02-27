@@ -36,11 +36,13 @@ impl BlockRegistry {
         player: &Player,
         location: BlockPos,
         server: &Server,
+        world: &World,
+        _is_sneaking: bool,
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             pumpkin_block
-                .normal_use(block, player, location, server)
+                .normal_use(block, player, location, server, world)
                 .await;
         }
     }
@@ -65,11 +67,12 @@ impl BlockRegistry {
         location: BlockPos,
         item: &Item,
         server: &Server,
+        world: &World,
     ) -> BlockActionResult {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             return pumpkin_block
-                .use_with_item(block, player, location, item, server)
+                .use_with_item(block, player, location, item, server, world)
                 .await;
         }
         BlockActionResult::Continue
@@ -106,6 +109,7 @@ impl BlockRegistry {
             .block_properties_manager
             .on_place_state(
                 world,
+                server,
                 block,
                 face,
                 block_pos,

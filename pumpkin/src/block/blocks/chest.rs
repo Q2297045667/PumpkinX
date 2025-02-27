@@ -10,6 +10,7 @@ use pumpkin_protocol::{client::play::CBlockAction, codec::var_int::VarInt};
 use pumpkin_util::math::position::BlockPos;
 use pumpkin_world::block::registry::{Block, get_block};
 
+use crate::world::World;
 use crate::{
     block::{pumpkin_block::PumpkinBlock, registry::BlockActionResult},
     entity::player::Player,
@@ -33,6 +34,7 @@ impl PumpkinBlock for ChestBlock {
         player: &Player,
         _location: BlockPos,
         server: &Server,
+        _world: &World,
     ) {
         self.open_chest_block(block, player, _location, server)
             .await;
@@ -45,6 +47,7 @@ impl PumpkinBlock for ChestBlock {
         _location: BlockPos,
         _item: &Item,
         server: &Server,
+        _world: &World,
     ) -> BlockActionResult {
         self.open_chest_block(block, player, _location, server)
             .await;

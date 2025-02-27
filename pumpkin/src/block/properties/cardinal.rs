@@ -22,6 +22,8 @@ pub enum East {
     Tall,
     Low,
     None,
+    Side,
+    Up,
 }
 #[block_property("north")]
 pub enum North {
@@ -30,6 +32,8 @@ pub enum North {
     Tall,
     Low,
     None,
+    Side,
+    Up,
 }
 #[block_property("south")]
 pub enum South {
@@ -38,6 +42,8 @@ pub enum South {
     Tall,
     Low,
     None,
+    Side,
+    Up,
 }
 #[block_property("up")]
 pub enum Up {
@@ -46,6 +52,8 @@ pub enum Up {
     Tall,
     Low,
     None,
+    Side,
+    Up,
 }
 #[block_property("west")]
 pub enum West {
@@ -54,6 +62,8 @@ pub enum West {
     Tall,
     Low,
     None,
+    Side,
+    Up,
 }
 
 pub async fn evaluate_fence_direction(
@@ -64,6 +74,9 @@ pub async fn evaluate_fence_direction(
 ) -> String {
     let other_side_block = BlockPos(block_pos.0.add(&face.to_offset()));
     let block = world.get_block(&other_side_block).await.unwrap();
+    if placed_block.name.contains("redstone") {
+        return North::Side.value();
+    }
     if placed_block.name.ends_with("_wall") {
         if face == &BlockDirection::Top {
             if block.id != 0 {
