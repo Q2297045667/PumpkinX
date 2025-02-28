@@ -35,6 +35,10 @@ impl BlockPos {
         })
     }
 
+    pub fn offset(&self, offset: Vector3<i32>) -> Self {
+        Self(self.0 + offset)
+    }
+
     pub fn floored(x: f64, y: f64, z: f64) -> Self {
         Self(Vector3::new(
             x.floor() as i32,

@@ -4,7 +4,10 @@ use pumpkin_data::item::Item;
 use pumpkin_macros::pumpkin_block;
 use pumpkin_protocol::server::play::SUseItemOn;
 use pumpkin_util::math::position::BlockPos;
-use pumpkin_world::block::{BlockDirection, registry::Block};
+use pumpkin_world::block::{
+    BlockDirection,
+    registry::{Block, State, get_block_collision_shapes, is_side_solid},
+};
 
 use crate::{
     block::{properties::Direction, pumpkin_block::PumpkinBlock, registry::BlockActionResult},
@@ -12,11 +15,28 @@ use crate::{
     world::World,
 };
 
+pub fn can_run_on_top(floor: &State) -> bool {
+    is_side_solid(
+        &get_block_collision_shapes(floor.id).unwrap(),
+        BlockDirection::Top,
+    )
+}
+
 #[pumpkin_block("minecraft:lever")]
 pub struct LeverBlock;
 
 #[async_trait]
 impl PumpkinBlock for LeverBlock {
+    async fn can_place_on_side(
+        &self,
+        world: &World,
+        location: BlockPos,
+        _side: BlockDirection,
+    ) -> bool {
+        let target_block_pos = BlockPos(location.0 + BlockDirection::Bottom.to_offset());
+        can_run_on_top(world.get_block_state(&target_block_pos).await.unwrap())
+    }
+
     async fn on_place(
         &self,
         server: &Server,
@@ -37,6 +57,7 @@ impl PumpkinBlock for LeverBlock {
             .block_properties_manager
             .on_place_state(
                 world,
+                server,
                 block,
                 &face,
                 block_pos,
@@ -54,6 +75,7 @@ impl PumpkinBlock for LeverBlock {
         _location: BlockPos,
         _item: &Item,
         _server: &Server,
+        _world: &World,
     ) -> BlockActionResult {
         BlockActionResult::Consume
     }

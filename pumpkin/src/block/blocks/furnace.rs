@@ -1,4 +1,4 @@
-use crate::block::registry::BlockActionResult;
+use crate::{block::registry::BlockActionResult, world::World};
 use crate::entity::player::Player;
 use async_trait::async_trait;
 use pumpkin_data::item::Item;
@@ -21,6 +21,7 @@ impl PumpkinBlock for FurnaceBlock {
         player: &Player,
         _location: BlockPos,
         server: &Server,
+        _world: &World,
     ) {
         self.open_furnace_screen(block, player, _location, server)
             .await;
@@ -33,6 +34,7 @@ impl PumpkinBlock for FurnaceBlock {
         _location: BlockPos,
         _item: &Item,
         server: &Server,
+        _world: &World,
     ) -> BlockActionResult {
         self.open_furnace_screen(block, player, _location, server)
             .await;

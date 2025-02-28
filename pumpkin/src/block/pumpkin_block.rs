@@ -7,8 +7,8 @@ use pumpkin_data::item::Item;
 use pumpkin_inventory::OpenContainer;
 use pumpkin_protocol::server::play::SUseItemOn;
 use pumpkin_util::math::position::BlockPos;
-use pumpkin_world::block::BlockDirection;
-use pumpkin_world::block::registry::Block;
+use pumpkin_world::block::registry::{Block, State};
+use pumpkin_world::block::{BlockDirection, BlockState};
 use std::sync::Arc;
 
 use super::properties::Direction;
@@ -29,6 +29,7 @@ pub trait PumpkinBlock: Send + Sync {
         _player: &Player,
         _location: BlockPos,
         _server: &Server,
+        _world: &World,
     ) {
     }
     fn should_drop_items_on_explosion(&self) -> bool {
@@ -49,6 +50,7 @@ pub trait PumpkinBlock: Send + Sync {
         _location: BlockPos,
         _item: &Item,
         _server: &Server,
+        _world: &World,
     ) -> BlockActionResult {
         BlockActionResult::Continue
     }
@@ -69,6 +71,7 @@ pub trait PumpkinBlock: Send + Sync {
             .block_properties_manager
             .on_place_state(
                 world,
+                server,
                 block,
                 face,
                 block_pos,
@@ -77,6 +80,15 @@ pub trait PumpkinBlock: Send + Sync {
                 other,
             )
             .await
+    }
+
+    async fn can_place_on_side(
+        &self,
+        _world: &World,
+        _location: BlockPos,
+        _side: BlockDirection,
+    ) -> bool {
+        true
     }
 
     async fn placed(
@@ -104,6 +116,55 @@ pub trait PumpkinBlock: Send + Sync {
         _location: BlockPos,
         _server: &Server,
         _container: &mut OpenContainer,
+    ) {
+    }
+
+    fn emits_redstone_power(&self, _block_state: &State) -> bool {
+        false
+    }
+
+    fn get_weak_redstone_power(
+        &self,
+        _block_state: &BlockState,
+        _world: &World,
+        _pos: &BlockPos,
+        _direction: &Direction,
+    ) -> u8 {
+        0
+    }
+
+    fn get_strong_redstone_power(
+        &self,
+        _block_state: &BlockState,
+        _world: &World,
+        _pos: &BlockPos,
+        _direction: &Direction,
+    ) -> u8 {
+        0
+    }
+
+    async fn scheduled_tick(
+        &self,
+        block: &Block,
+        block_state: &State,
+        server: &Server,
+        world: &World,
+        location: &BlockPos,
+    ) {
+        let new_state = server
+            .block_properties_manager
+            .on_scheduled_tick(block, block_state, world, server)
+            .await;
+
+        world.set_block_state(&location, new_state).await;
+    }
+
+    async fn on_state_replaced(
+        &self,
+        _block: &Block,
+        _states: &Vec<String>,
+        _server: &Server,
+        _world: &World,
     ) {
     }
 }

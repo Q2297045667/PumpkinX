@@ -35,6 +35,22 @@ impl TryFrom<i32> for BlockDirection {
     }
 }
 
+impl TryFrom<&str> for BlockDirection {
+    type Error = InvalidBlockFace;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "bottom" => Ok(Self::Bottom),
+            "top" => Ok(Self::Top),
+            "north" => Ok(Self::North),
+            "south" => Ok(Self::South),
+            "west" => Ok(Self::West),
+            "east" => Ok(Self::East),
+            _ => Err(InvalidBlockFace),
+        }
+    }
+}
+
 impl BlockDirection {
     pub fn to_offset(&self) -> Vector3<i32> {
         match self {

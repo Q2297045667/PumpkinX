@@ -10,11 +10,26 @@ pub struct Powered(bool);
 
 #[async_trait]
 impl BlockProperty for Powered {
-    async fn on_interact(&self, value: String, _block: &Block, _item: &ItemStack) -> String {
-        if value == Self::True().value() {
+    async fn on_interact(&self, value: String, block: &Block, _item: &ItemStack) -> String {
+        // Lever
+        if block.id == 242 {
+            if value == Self::True().value() {
+                return Self::False().value();
+            } else {
+                return Self::True().value();
+            }
+        }
+
+        value
+    }
+
+    
+
+    async fn on_scheduled_tick(&self, value: String, block: &Block) -> String {
+        if block.name.contains("button") {
             Self::False().value()
         } else {
-            Self::True().value()
+            value
         }
     }
 }

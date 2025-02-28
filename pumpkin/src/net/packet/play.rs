@@ -1021,24 +1021,29 @@ impl Player {
         };
 
         let Some(stack) = item_slot else {
-            if !self
+            let is_sneaking = self
                 .living_entity
                 .entity
                 .sneaking
-                .load(std::sync::atomic::Ordering::Relaxed)
-            {
-                // Using block with empty hand
-                server
-                    .block_registry
-                    .on_use(block, self, location, server)
-                    .await;
-                let block_state = world.get_block_state(&location).await?;
-                let new_state = server
-                    .block_properties_manager
-                    .on_interact(block, block_state, &ItemStack::new(0, Item::AIR))
-                    .await;
-                world.set_block_state(&location, new_state).await;
-            }
+                .load(std::sync::atomic::Ordering::Relaxed);
+            // Using block with empty hand
+            server
+                .block_registry
+                .on_use(block, self, location, server, world, is_sneaking)
+                .await;
+            let block_state = world.get_block_state(&location).await?;
+            let new_state = server
+                .block_properties_manager
+                .on_interact(
+                    block,
+                    block_state,
+                    &ItemStack::new(0, Item::AIR),
+                    world,
+                    server,
+                    is_sneaking,
+                )
+                .await;
+            world.set_block_state(&location, new_state).await;
             return Ok(());
         };
         if !self
@@ -1049,12 +1054,12 @@ impl Player {
         {
             let action_result = server
                 .block_registry
-                .use_with_item(block, self, location, &stack.item, server)
+                .use_with_item(block, self, location, &stack.item, server, world)
                 .await;
             let block_state = world.get_block_state(&location).await?;
             let new_state = server
                 .block_properties_manager
-                .on_interact(block, block_state, &stack)
+                .on_interact(block, block_state, &stack, world, server, false)
                 .await;
             world.set_block_state(&location, new_state).await;
             match action_result {
@@ -1394,6 +1399,16 @@ impl Player {
                 }
             }
         }
+
+        if let Some(pumpkin_block) = server.block_registry.get_pumpkin_block(&block) {
+            if !pumpkin_block
+                .can_place_on_side(world, final_block_pos, *face)
+                .await
+            {
+                return Ok(false);
+            }
+        }
+
         if !intersects {
             let _replaced_id = world.set_block_state(&final_block_pos, new_state).await;
             server

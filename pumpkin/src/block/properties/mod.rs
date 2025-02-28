@@ -26,8 +26,9 @@ pub(crate) mod slab_type;
 pub(crate) mod stair_shape;
 pub(crate) mod unstable;
 pub(crate) mod waterlog;
+pub(crate) mod power;
 
-use crate::world::World;
+use crate::{server::Server, world::World};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Direction {
@@ -75,6 +76,10 @@ pub trait BlockProperty: Sync + Send + BlockPropertyMetadata {
     }
 
     async fn on_interact(&self, value: String, _block: &Block, _item: &ItemStack) -> String {
+        value
+    }
+
+    async fn on_scheduled_tick(&self, value: String, _block: &Block) -> String {
         value
     }
 }
@@ -178,6 +183,7 @@ impl BlockPropertiesManager {
     pub async fn on_place_state(
         &self,
         world: &World,
+        server: &Server,
         block: &Block,
         face: &BlockDirection,
         block_pos: &BlockPos,
@@ -210,6 +216,13 @@ impl BlockPropertiesManager {
                     return block.default_state_id;
                 }
             }
+
+            if let Some(pumpkin_block) = server.block_registry.get_pumpkin_block(block) {
+                pumpkin_block
+                    .on_state_replaced(block, &hmap_key, server, world)
+                    .await;
+            }
+
             // Base state id plus offset
             let mapping = properties.state_mappings.get(&hmap_key);
             if let Some(mapping) = mapping {
@@ -220,7 +233,15 @@ impl BlockPropertiesManager {
         block.default_state_id
     }
 
-    pub async fn on_interact(&self, block: &Block, block_state: &State, item: &ItemStack) -> u16 {
+    pub async fn on_interact(
+        &self,
+        block: &Block,
+        block_state: &State,
+        item: &ItemStack,
+        world: &World,
+        server: &Server,
+        _is_sneaking: bool,
+    ) -> u16 {
         if block_state.id == 0 {
             return block_state.id;
         }
@@ -245,11 +266,109 @@ impl BlockPropertiesManager {
                 // Base state id plus offset
                 let mapping = properties.state_mappings.get(&hmap_key);
                 if let Some(mapping) = mapping {
+                    if block.states[0].id + mapping != block_state.id {
+                        if let Some(pumpkin_block) = server.block_registry.get_pumpkin_block(block)
+                        {
+                            pumpkin_block
+                                .on_state_replaced(block, &hmap_key, server, world)
+                                .await;
+                        }
+                    }
                     return block.states[0].id + mapping;
                 }
                 log::error!("Failed to get Block Properties mapping for {}", block.name);
             }
         }
         block_state.id
+    }
+
+    pub async fn on_scheduled_tick(
+        &self,
+        block: &Block,
+        block_state: &State,
+        world: &World,
+        server: &Server,
+    ) -> u16 {
+        if block_state.id == 0 {
+            return block_state.id;
+        }
+        if let Some(properties) = self.properties_registry.get(&block.id) {
+            if let Some(states) = properties
+                .property_mappings
+                .get(&(block_state.id - block.states[0].id))
+            {
+                let mut hmap_key: Vec<String> = Vec::with_capacity(block.properties.len());
+
+                for (i, raw_property) in block.properties.iter().enumerate() {
+                    let property = self.registered_properties.get(&raw_property.name);
+                    if let Some(property) = property {
+                        let state = property.on_scheduled_tick(states[i].clone(), block).await;
+                        hmap_key.push(state);
+                    } else {
+                        log::warn!("Unknown Block Property: {}", &raw_property.name);
+                        // if one property is not found everything will not work
+                        return block.default_state_id;
+                    }
+                }
+
+                // Base state id plus offset
+                let mapping = properties.state_mappings.get(&hmap_key);
+                if let Some(mapping) = mapping {
+                    if block.states[0].id + mapping != block_state.id {
+                        if let Some(pumpkin_block) = server.block_registry.get_pumpkin_block(block)
+                        {
+                            pumpkin_block
+                                .on_state_replaced(block, &hmap_key, server, world)
+                                .await;
+                        }
+                    }
+                    return block.states[0].id + mapping;
+                }
+                log::error!("Failed to get Block Properties mapping for {}", block.name);
+            }
+        }
+        block_state.id
+    }
+
+    pub async fn get_states(&self, block: &Block, block_state: &State) -> Vec<String> {
+        if let Some(properties) = self.properties_registry.get(&block.id) {
+            return properties
+                .property_mappings
+                .get(&(block_state.id - block.states[0].id))
+                .unwrap()
+                .clone();
+        }
+        vec![]
+    }
+
+    pub async fn update_states<F, Fut>(
+        &self,
+        block: &Block,
+        block_state: &State,
+        location: &BlockPos,
+        world: &World,
+        server: &Server,
+        func: F,
+    ) where
+        F: FnOnce(Vec<String>) -> Fut,
+        Fut: std::future::Future<Output = Vec<String>>,
+    {
+        let mut block_state_id = block_state.id;
+        let states: Vec<String> = self.get_states(block, block_state).await;
+        let new_states = func(states).await;
+        if let Some(properties) = self.properties_registry.get(&block.id) {
+            let mapping = properties.state_mappings.get(&new_states);
+            if let Some(mapping) = mapping {
+                if block.states[0].id + mapping != block_state_id {
+                    if let Some(pumpkin_block) = server.block_registry.get_pumpkin_block(block) {
+                        pumpkin_block
+                            .on_state_replaced(block, &new_states, server, world)
+                            .await;
+                    }
+                }
+                block_state_id = block.states[0].id + mapping;
+            }
+        }
+        world.set_block_state(&location, block_state_id).await;
     }
 }
