@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use pumpkin_util::math::int_provider::InvProvider;
+use pumpkin_util::math::int_provider::IntProvider;
 use serde::Deserialize;
 
 use crate::loot::LootTable;
@@ -134,7 +134,7 @@ pub struct Block {
 }
 #[derive(Deserialize, Clone)]
 pub struct Experience {
-    pub experience: InvProvider,
+    pub experience: IntProvider,
 }
 #[derive(Deserialize, Clone, Debug)]
 pub struct Property {

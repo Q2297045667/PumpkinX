@@ -2,6 +2,7 @@ use num_traits::{Float, One, PrimInt, Zero};
 
 pub mod boundingbox;
 pub mod experience;
+pub mod float_provider;
 pub mod int_provider;
 pub mod position;
 pub mod vector2;

@@ -227,10 +227,10 @@ impl<'a> ProtoChunk<'a> {
 
     pub fn populate_biomes(&mut self) {
         let min_y = self.noise_sampler.min_y();
-        let bottom = section_coords::block_to_section(min_y) as i16;
+        let bottom = section_coords::block_to_section(min_y) as i32;
         let top =
-            section_coords::block_to_section(min_y as i16 + self.noise_sampler.height() as i16 - 1)
-                as i16;
+            section_coords::block_to_section(min_y as i32 + self.noise_sampler.height() as i32 - 1)
+                as i32;
 
         let start_x = chunk_pos::start_block_x(&self.chunk_pos);
         let start_z = chunk_pos::start_block_z(&self.chunk_pos);
@@ -332,25 +332,10 @@ impl<'a> ProtoChunk<'a> {
                                         &mut self.surface_height_estimate_sampler,
                                     )
                                     .unwrap_or(self.default_block);
-                                //log::debug!("Sampled block state in {:?}", inst.elapsed());
-
-                                let local_pos = Vector3 {
-                                    x: block_x & 15,
-                                    y: block_y - min_y as i32,
-                                    z: block_z & 15,
-                                };
-
-                                #[cfg(debug_assertions)]
-                                {
-                                    assert!(local_pos.x < 16 && local_pos.x >= 0);
-                                    assert!(
-                                        local_pos.y < self.noise_sampler.height() as i32
-                                            && local_pos.y >= 0
-                                    );
-                                    assert!(local_pos.z < 16 && local_pos.z >= 0);
-                                }
-                                let index = self.local_pos_to_index(&local_pos);
-                                self.flat_block_map[index] = block_state;
+                                self.set_block_state(
+                                    &Vector3::new(block_x, block_y, block_z),
+                                    block_state,
+                                );
                             }
                         }
                     }

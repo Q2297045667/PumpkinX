@@ -2,10 +2,12 @@
 
 pub mod aquifer_sampler;
 mod blender;
+pub mod carver;
 pub mod chunk_noise;
 mod generator;
 mod generic_generator;
 pub mod height_limit;
+pub mod height_provider;
 mod implementation;
 pub mod noise;
 pub mod noise_router;
@@ -15,6 +17,7 @@ pub mod proto_chunk;
 mod seed;
 pub mod settings;
 mod surface;
+pub mod y_offset;
 
 use derive_getters::Getters;
 pub use generator::WorldGenerator;

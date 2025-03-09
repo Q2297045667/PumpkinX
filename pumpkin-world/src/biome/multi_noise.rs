@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use serde::{Deserialize, Deserializer, Serialize};
 
 pub fn to_long(float: f32) -> i64 {
-    (float * 1000.0) as i64
+    (float * 10000.0) as i64
 }
 
 #[derive(Clone, Serialize, Deserialize)]
