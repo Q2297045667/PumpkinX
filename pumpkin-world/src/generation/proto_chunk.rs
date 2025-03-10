@@ -3,8 +3,8 @@ use pumpkin_util::math::{vector2::Vector2, vector3::Vector3};
 
 use crate::{
     biome::{BiomeSupplier, MultiNoiseBiomeSupplier},
-    block::{ChunkBlockState, registry::get_state_by_state_id},
-    generation::{chunk_noise::CHUNK_DIM, positions::chunk_pos},
+    block::{registry::get_state_by_state_id, ChunkBlockState},
+    generation::{biome, chunk_noise::CHUNK_DIM, positions::chunk_pos},
 };
 
 use super::{
@@ -166,10 +166,7 @@ impl<'a> ProtoChunk<'a> {
                 ChunkBlockState::AIR;
                 CHUNK_DIM as usize * CHUNK_DIM as usize * height as usize
             ],
-            flat_biome_map: vec![
-                Biome::Plains;
-                CHUNK_DIM as usize * CHUNK_DIM as usize * height as usize
-            ],
+            flat_biome_map: vec![Biome::Desert; 4 * 4 * 4 * height as usize],
         }
     }
 
@@ -183,6 +180,19 @@ impl<'a> ProtoChunk<'a> {
         }
         self.noise_sampler.height() as usize * CHUNK_DIM as usize * local_pos.x as usize
             + CHUNK_DIM as usize * local_pos.y as usize
+            + local_pos.z as usize
+    }
+
+    #[inline]
+    fn local_pos_to_index_biome(&self, local_pos: &Vector3<i32>) -> usize {
+        #[cfg(debug_assertions)]
+        {
+            assert!(local_pos.x >= 0 && local_pos.x <= 15);
+            assert!(local_pos.y < self.noise_sampler.height() as i32 && local_pos.y >= 0);
+            assert!(local_pos.z >= 0 && local_pos.z <= 15);
+        }
+        self.noise_sampler.height() as usize * 4 as usize * local_pos.x as usize
+            + 4 as usize * local_pos.y as usize
             + local_pos.z as usize
     }
 
@@ -214,14 +224,14 @@ impl<'a> ProtoChunk<'a> {
     #[inline]
     pub fn get_biome(&self, local_pos: &Vector3<i32>) -> Biome {
         let local_pos = Vector3::new(
-            local_pos.x & 15,
+            local_pos.x & 3,
             local_pos.y - self.noise_sampler.min_y() as i32,
-            local_pos.z & 15,
+            local_pos.z & 3,
         );
         if local_pos.y < 0 || local_pos.y >= self.noise_sampler.height() as i32 {
             Biome::Plains
         } else {
-            self.flat_biome_map[self.local_pos_to_index(&local_pos)]
+            self.flat_biome_map[self.local_pos_to_index_biome(&local_pos)]
         }
     }
 
@@ -249,12 +259,12 @@ impl<'a> ProtoChunk<'a> {
                             &mut self.multi_noise_sampler,
                         );
                         let local_pos = Vector3 {
-                            x: x & 15,
+                            x: x & 3,
                             y: y - min_y as i32,
-                            z: z & 15,
+                            z: z & 3,
                         };
-                        let index = self.local_pos_to_index(&local_pos);
-                        self.flat_biome_map[index] = biome;
+                        let index = self.local_pos_to_index_biome(&local_pos);
+                        self.flat_biome_map[index] = Biome::Desert;
                     }
                 }
             }
@@ -406,7 +416,8 @@ impl<'a> ProtoChunk<'a> {
                     } else {
                         top
                     };
-                    let biome = self.get_biome(&Vector3::new(x, biome_y as i32, z));
+                    let biome = biome::get_biome(self, self.random_config.seed as i64, &Vector3::new(x, biome_y as i32, z));
+                    dbg!(biome);
                     context.biome = biome;
 
                     stone_depth_above += 1;

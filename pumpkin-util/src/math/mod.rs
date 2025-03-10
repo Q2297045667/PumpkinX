@@ -80,6 +80,9 @@ where
         div
     }
 }
+pub fn square(n: f64) -> f64 {
+        n * n
+}
 
 #[inline]
 pub fn floor_mod<T>(x: T, y: T) -> T
