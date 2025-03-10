@@ -652,11 +652,12 @@ mod test {
 
     use crate::{
         block::ChunkBlockState,
+        chunk::CHUNK_WIDTH,
         generation::{
             GlobalRandomConfig, biome_coords,
             chunk_noise::{
-                BlockStateSampler, CHUNK_DIM, ChainedBlockStateSampler, ChunkNoiseGenerator,
-                LAVA_BLOCK, WATER_BLOCK,
+                BlockStateSampler, ChainedBlockStateSampler, ChunkNoiseGenerator, LAVA_BLOCK,
+                WATER_BLOCK,
             },
             noise_router::{
                 chunk_density_function::{ChunkNoiseFunctionSampleOptions, SampleAction},
@@ -704,7 +705,7 @@ mod test {
         let noise = ChunkNoiseGenerator::new(
             base_router,
             &RANDOM_CONFIG,
-            16 / shape.horizontal_cell_block_count(),
+            CHUNK_WIDTH / shape.horizontal_cell_block_count() as usize,
             chunk_pos::start_block_x(&chunk_pos),
             chunk_pos::start_block_z(&chunk_pos),
             shape,
@@ -733,15 +734,16 @@ mod test {
             _ => unreachable!(),
         };
 
-        let horizontal_cell_count = CHUNK_DIM / shape.horizontal_cell_block_count();
+        let horizontal_cell_count = CHUNK_WIDTH / shape.horizontal_cell_block_count() as usize;
 
-        let horizontal_biome_end =
-            biome_coords::from_block(horizontal_cell_count * shape.horizontal_cell_block_count());
+        let horizontal_biome_end = biome_coords::from_block(
+            horizontal_cell_count * shape.horizontal_cell_block_count() as usize,
+        );
 
         let surface_height_estimator_options = SurfaceHeightSamplerBuilderOptions::new(
             chunk_pos.x,
             chunk_pos.z,
-            horizontal_biome_end as usize,
+            horizontal_biome_end,
             shape.min_y as i32,
             shape.max_y() as i32,
             shape.vertical_cell_block_count() as usize,

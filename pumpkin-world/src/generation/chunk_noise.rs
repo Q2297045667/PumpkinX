@@ -27,8 +27,6 @@ use super::{
 pub const LAVA_BLOCK: ChunkBlockState = block_state!("lava");
 pub const WATER_BLOCK: ChunkBlockState = block_state!("water");
 
-pub const CHUNK_DIM: u8 = 16;
-
 pub enum BlockStateSampler {
     Aquifer(AquiferSampler),
     Ore(OreVeinSampler),
@@ -160,7 +158,7 @@ impl<'a> ChunkNoiseGenerator<'a> {
     pub fn new(
         noise_router_base: &'a GlobalProtoNoiseRouter,
         random_config: &GlobalRandomConfig,
-        horizontal_cell_count: u8,
+        horizontal_cell_count: usize,
         start_block_x: i32,
         start_block_z: i32,
         generation_shape: &'a GenerationShapeConfig,
@@ -184,7 +182,7 @@ impl<'a> ChunkNoiseGenerator<'a> {
             biome_coords::from_block(start_block_z),
         );
         let horizontal_biome_end = biome_coords::from_block(
-            horizontal_cell_count * generation_shape.horizontal_cell_block_count(),
+            horizontal_cell_count * generation_shape.horizontal_cell_block_count() as usize,
         );
 
         let vertical_cell_count = generation_shape.height as usize
@@ -200,10 +198,10 @@ impl<'a> ChunkNoiseGenerator<'a> {
             horizontal_cell_block_count as usize,
             vertical_cell_block_count as usize,
             vertical_cell_count,
-            horizontal_cell_count as usize,
+            horizontal_cell_count,
             biome_pos.x,
             biome_pos.z,
-            horizontal_biome_end as usize,
+            horizontal_biome_end,
         );
 
         let aquifer_sampler = if aquifers {
