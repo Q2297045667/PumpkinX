@@ -11,7 +11,6 @@ mod generation;
 pub mod item;
 pub mod level;
 mod lock;
-pub mod loot;
 mod noise_router;
 pub mod world_info;
 pub const DIRECT_PALETTE_BITS: u32 = 15;
