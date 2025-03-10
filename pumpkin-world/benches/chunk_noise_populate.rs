@@ -11,7 +11,7 @@ use tokio::{runtime::Runtime, sync::RwLock, task::JoinSet};
 
 fn bench_populate_noise(c: &mut Criterion) {
     let seed = 0;
-    let random_config = GlobalRandomConfig::new(seed);
+    let random_config = GlobalRandomConfig::new(seed, false);
     let base_router =
         GlobalProtoNoiseRouter::generate(NOISE_ROUTER_ASTS.overworld(), &random_config);
     let surface_config = GENERATION_SETTINGS

@@ -91,8 +91,8 @@ pub struct ProtoChunk<'a> {
     settings: &'a GenerationSettings,
     default_block: ChunkBlockState,
     // These are local positions
-    flat_block_map: Vec<ChunkBlockState>,
-    flat_biome_map: Vec<Biome>,
+    flat_block_map: Box<[ChunkBlockState]>,
+    flat_biome_map: Box<[Biome]>,
     // may want to use chunk status
 }
 
@@ -161,13 +161,15 @@ impl<'a> ProtoChunk<'a> {
             noise_sampler: sampler,
             multi_noise_sampler,
             surface_height_estimate_sampler,
-            flat_block_map: vec![ChunkBlockState::AIR; CHUNK_AREA * height as usize],
+            flat_block_map: vec![ChunkBlockState::AIR; CHUNK_AREA * height as usize]
+                .into_boxed_slice(),
             flat_biome_map: vec![
                 Biome::Desert;
                 biome_coords::from_block(CHUNK_WIDTH)
                     * biome_coords::from_block(CHUNK_WIDTH)
                     * biome_coords::from_block(height as usize)
-            ],
+            ]
+            .into_boxed_slice(),
         }
     }
 
@@ -185,19 +187,22 @@ impl<'a> ProtoChunk<'a> {
     }
 
     #[inline]
-    fn local_pos_to_biome_index(&self, local_pos: &Vector3<i32>) -> usize {
+    fn local_biome_pos_to_biome_index(&self, local_biome_pos: &Vector3<i32>) -> usize {
         #[cfg(debug_assertions)]
         {
-            assert!(local_pos.x >= 0 && local_pos.x <= 15);
-            assert!(local_pos.y < self.noise_sampler.height() as i32 && local_pos.y >= 0);
-            assert!(local_pos.z >= 0 && local_pos.z <= 15);
+            assert!(local_biome_pos.x >= 0 && local_biome_pos.x <= 3);
+            assert!(
+                local_biome_pos.y < biome_coords::from_block(self.noise_sampler.height() as i32)
+                    && local_biome_pos.y >= 0
+            );
+            assert!(local_biome_pos.z >= 0 && local_biome_pos.z <= 3);
         }
 
         biome_coords::from_block(self.noise_sampler.height() as usize)
             * biome_coords::from_block(CHUNK_WIDTH)
-            * biome_coords::from_block(local_pos.x as usize)
-            + biome_coords::from_block(CHUNK_WIDTH) * biome_coords::from_block(local_pos.y as usize)
-            + biome_coords::from_block(local_pos.z as usize)
+            * local_biome_pos.x as usize
+            + biome_coords::from_block(CHUNK_WIDTH) * local_biome_pos.y as usize
+            + local_biome_pos.z as usize
     }
 
     #[inline]
@@ -226,16 +231,18 @@ impl<'a> ProtoChunk<'a> {
     }
 
     #[inline]
-    pub fn get_biome(&self, local_pos: &Vector3<i32>) -> Biome {
+    pub fn get_biome(&self, global_biome_pos: &Vector3<i32>) -> Biome {
         let local_pos = Vector3::new(
-            local_pos.x & 3,
-            local_pos.y - self.noise_sampler.min_y() as i32,
-            local_pos.z & 3,
+            global_biome_pos.x & 3,
+            global_biome_pos.y - biome_coords::from_block(self.noise_sampler.min_y() as i32),
+            global_biome_pos.z & 3,
         );
-        if local_pos.y < 0 || local_pos.y >= self.noise_sampler.height() as i32 {
+        if local_pos.y < 0
+            || local_pos.y >= biome_coords::from_block(self.noise_sampler.height() as i32)
+        {
             Biome::Plains
         } else {
-            self.flat_biome_map[self.local_pos_to_biome_index(&local_pos)]
+            self.flat_biome_map[self.local_biome_pos_to_biome_index(&local_pos)]
         }
     }
 
@@ -251,28 +258,40 @@ impl<'a> ProtoChunk<'a> {
         let start_x = biome_coords::from_block(start_x);
         let start_z = biome_coords::from_block(start_z);
 
+        #[cfg(debug_assertions)]
+        let mut indices = (0..self.flat_biome_map.len()).collect::<Vec<_>>();
+
         for i in bottom_section..=top_section {
-            let start_y = section_coords::section_to_block(i);
+            let block_y = section_coords::section_to_block(i);
+            let start_y = biome_coords::from_block(block_y);
             let biomes_per_section = biome_coords::from_block(CHUNK_WIDTH) as i32;
 
             for x in 0..biomes_per_section {
                 for y in 0..biomes_per_section {
                     for z in 0..biomes_per_section {
+                        let biome_pos = Vector3::new(start_x + x, start_y + y, start_z + z);
                         let biome = MultiNoiseBiomeSupplier::biome(
-                            Vector3::new(start_x + x, start_y + y, start_z + z),
+                            &biome_pos,
                             &mut self.multi_noise_sampler,
                         );
-                        let local_pos = Vector3 {
-                            x: x & 3,
-                            y: y - min_y as i32,
-                            z: z & 3,
+                        println!("Populating biome: {:?} -> {:?}", biome_pos, biome);
+
+                        let local_biome_pos = Vector3 {
+                            x,
+                            // Make the y start from 0
+                            y: start_y + y - biome_coords::from_block(min_y as i32),
+                            z,
                         };
-                        let index = self.local_pos_to_biome_index(&local_pos);
+                        let index = self.local_biome_pos_to_biome_index(&local_biome_pos);
+
+                        #[cfg(debug_assertions)]
+                        indices.retain(|i| *i != index);
                         self.flat_biome_map[index] = biome;
                     }
                 }
             }
         }
+        assert!(indices.is_empty(), "Not all biome indices were set!");
     }
 
     pub fn populate_noise(&mut self) {
@@ -420,12 +439,10 @@ impl<'a> ProtoChunk<'a> {
                     } else {
                         top
                     };
-                    let biome = biome::get_biome(
-                        self,
-                        self.random_config.seed as i64,
-                        &Vector3::new(x, biome_y as i32, z),
-                    );
-                    dbg!(biome);
+
+                    let biome_pos = Vector3::new(x, biome_y as i32, z);
+                    let biome = biome::get_biome_blend(self, self.random_config.seed, &biome_pos);
+                    //println!("Blending with biome at: {:?}", biome_pos);
                     context.biome = biome;
 
                     stone_depth_above += 1;

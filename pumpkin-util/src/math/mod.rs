@@ -80,8 +80,13 @@ where
         div
     }
 }
-pub fn square(n: f64) -> f64 {
-        n * n
+
+#[inline]
+pub fn square<T>(n: T) -> T
+where
+    T: Float,
+{
+    n * n
 }
 
 #[inline]

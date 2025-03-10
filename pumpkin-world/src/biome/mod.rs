@@ -21,7 +21,7 @@ pub static BIOME_ENTRIES: LazyLock<SearchTree<Biome>> = LazyLock::new(|| {
 
     let entries: Vec<(Biome, NoiseHypercube)> = overworld_data
         .iter()
-        .map(|(biome, biome_map)| (biome.clone(), biome_map.clone()))
+        .map(|(biome, biome_map)| (*biome, biome_map.clone()))
         .collect();
 
     SearchTree::create(entries).expect("entries cannot be empty")
@@ -33,14 +33,14 @@ thread_local! {
 
 #[enum_dispatch]
 pub trait BiomeSupplier {
-    fn biome(at: Vector3<i32>, noise: &mut MultiNoiseSampler<'_>) -> Biome;
+    fn biome(at: &Vector3<i32>, noise: &mut MultiNoiseSampler<'_>) -> Biome;
 }
 
 #[derive(Clone)]
 pub struct DebugBiomeSupplier;
 
 impl BiomeSupplier for DebugBiomeSupplier {
-    fn biome(_at: Vector3<i32>, _noise: &mut MultiNoiseSampler<'_>) -> Biome {
+    fn biome(_at: &Vector3<i32>, _noise: &mut MultiNoiseSampler<'_>) -> Biome {
         Biome::Plains
     }
 }
@@ -50,7 +50,7 @@ pub struct MultiNoiseBiomeSupplier;
 // TODO: Add End supplier
 
 impl BiomeSupplier for MultiNoiseBiomeSupplier {
-    fn biome(at: Vector3<i32>, noise: &mut MultiNoiseSampler<'_>) -> Biome {
+    fn biome(at: &Vector3<i32>, noise: &mut MultiNoiseSampler<'_>) -> Biome {
         let point = noise.sample(at.x, at.y, at.z);
         LAST_RESULT_NODE.with_borrow_mut(|last_result| {
             BIOME_ENTRIES

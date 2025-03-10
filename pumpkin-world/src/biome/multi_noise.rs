@@ -2,8 +2,6 @@ use std::cmp::Ordering;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::dimension::Dimension;
-
 pub fn to_long(float: f32) -> i64 {
     (float * 10000.0) as i64
 }
