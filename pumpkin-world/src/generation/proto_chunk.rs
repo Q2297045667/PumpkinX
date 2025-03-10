@@ -5,7 +5,7 @@ use crate::{
     biome::{BiomeSupplier, MultiNoiseBiomeSupplier},
     block::{ChunkBlockState, registry::get_state_by_state_id},
     chunk::{CHUNK_AREA, CHUNK_WIDTH},
-    generation::positions::chunk_pos,
+    generation::{biome, positions::chunk_pos},
 };
 
 use super::{
@@ -163,7 +163,7 @@ impl<'a> ProtoChunk<'a> {
             surface_height_estimate_sampler,
             flat_block_map: vec![ChunkBlockState::AIR; CHUNK_AREA * height as usize],
             flat_biome_map: vec![
-                Biome::Plains;
+                Biome::Desert;
                 biome_coords::from_block(CHUNK_WIDTH)
                     * biome_coords::from_block(CHUNK_WIDTH)
                     * biome_coords::from_block(height as usize)
@@ -228,9 +228,9 @@ impl<'a> ProtoChunk<'a> {
     #[inline]
     pub fn get_biome(&self, local_pos: &Vector3<i32>) -> Biome {
         let local_pos = Vector3::new(
-            local_pos.x & 15,
+            local_pos.x & 3,
             local_pos.y - self.noise_sampler.min_y() as i32,
-            local_pos.z & 15,
+            local_pos.z & 3,
         );
         if local_pos.y < 0 || local_pos.y >= self.noise_sampler.height() as i32 {
             Biome::Plains
@@ -263,9 +263,9 @@ impl<'a> ProtoChunk<'a> {
                             &mut self.multi_noise_sampler,
                         );
                         let local_pos = Vector3 {
-                            x: x & 15,
+                            x: x & 3,
                             y: y - min_y as i32,
-                            z: z & 15,
+                            z: z & 3,
                         };
                         let index = self.local_pos_to_biome_index(&local_pos);
                         self.flat_biome_map[index] = biome;
@@ -420,7 +420,12 @@ impl<'a> ProtoChunk<'a> {
                     } else {
                         top
                     };
-                    let biome = self.get_biome(&Vector3::new(x, biome_y as i32, z));
+                    let biome = biome::get_biome(
+                        self,
+                        self.random_config.seed as i64,
+                        &Vector3::new(x, biome_y as i32, z),
+                    );
+                    dbg!(biome);
                     context.biome = biome;
 
                     stone_depth_above += 1;

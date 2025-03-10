@@ -11,16 +11,20 @@ use crate::{
 pub mod multi_noise;
 
 pub static BIOME_ENTRIES: LazyLock<SearchTree<Biome>> = LazyLock::new(|| {
-    SearchTree::create(
-        serde_json::from_str::<HashMap<Dimension, HashMap<Biome, NoiseHypercube>>>(include_str!(
-            "../../../assets/multi_noise.json"
-        ))
-        .expect("Could not parse multi_noise.json.")
-        .into_iter()
-        .flat_map(|(_, biome_map)| biome_map.into_iter())
-        .collect(),
-    )
-    .expect("entries cannot be empty")
+    let data: HashMap<Dimension, HashMap<Biome, NoiseHypercube>> =
+        serde_json::from_str(include_str!("../../../assets/multi_noise.json"))
+            .expect("Could not parse multi_noise.json.");
+    // TODO: support non overworld biomes
+    let overworld_data = data
+        .get(&Dimension::Overworld)
+        .expect("Overworld dimension not found");
+
+    let entries: Vec<(Biome, NoiseHypercube)> = overworld_data
+        .iter()
+        .map(|(biome, biome_map)| (biome.clone(), biome_map.clone()))
+        .collect();
+
+    SearchTree::create(entries).expect("entries cannot be empty")
 });
 
 thread_local! {
