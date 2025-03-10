@@ -1,11 +1,10 @@
 use serde::Deserialize;
 
+use super::{MaterialCondition, MaterialRuleContext};
 use crate::{
-    block::{BlockState, BlockStateCodec},
+    block::{BlockStateCodec, ChunkBlockState},
     generation::noise_router::surface_height_sampler::SurfaceHeightEstimateSampler,
 };
-
-use super::{MaterialCondition, MaterialRuleContext};
 
 #[derive(Deserialize)]
 #[serde(tag = "type")]
@@ -25,7 +24,7 @@ impl MaterialRule {
         &self,
         context: &mut MaterialRuleContext,
         surface_height_estimate_sampler: &mut SurfaceHeightEstimateSampler,
-    ) -> Option<BlockState> {
+    ) -> Option<ChunkBlockState> {
         match self {
             MaterialRule::Badlands => todo!(),
             MaterialRule::Block(block) => block.try_apply(),
@@ -45,8 +44,8 @@ pub struct BlockMaterialRule {
 }
 
 impl BlockMaterialRule {
-    pub fn try_apply(&self) -> Option<BlockState> {
-        BlockState::new(&self.result_state.name)
+    pub fn try_apply(&self) -> Option<ChunkBlockState> {
+        ChunkBlockState::new(&self.result_state.name)
     }
 }
 
@@ -60,7 +59,7 @@ impl SequenceMaterialRule {
         &self,
         context: &mut MaterialRuleContext,
         surface_height_estimate_sampler: &mut SurfaceHeightEstimateSampler,
-    ) -> Option<BlockState> {
+    ) -> Option<ChunkBlockState> {
         for seq in &self.sequence {
             if let Some(state) = seq.try_apply(context, surface_height_estimate_sampler) {
                 return Some(state);
@@ -81,7 +80,7 @@ impl ConditionMaterialRule {
         &self,
         context: &mut MaterialRuleContext,
         surface_height_estimate_sampler: &mut SurfaceHeightEstimateSampler,
-    ) -> Option<BlockState> {
+    ) -> Option<ChunkBlockState> {
         if self.if_true.test(context, surface_height_estimate_sampler) {
             return self
                 .then_run

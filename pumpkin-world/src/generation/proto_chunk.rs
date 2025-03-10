@@ -3,7 +3,7 @@ use pumpkin_util::math::{vector2::Vector2, vector3::Vector3};
 
 use crate::{
     biome::{BiomeSupplier, MultiNoiseBiomeSupplier},
-    block::{BlockState, registry::get_state_by_state_id},
+    block::{ChunkBlockState, registry::get_state_by_state_id},
     generation::{chunk_noise::CHUNK_DIM, positions::chunk_pos},
 };
 
@@ -88,9 +88,9 @@ pub struct ProtoChunk<'a> {
     pub surface_height_estimate_sampler: SurfaceHeightEstimateSampler<'a>,
     random_config: &'a GlobalRandomConfig,
     settings: &'a GenerationSettings,
-    default_block: BlockState,
+    default_block: ChunkBlockState,
     // These are local positions
-    flat_block_map: Vec<BlockState>,
+    flat_block_map: Vec<ChunkBlockState>,
     flat_biome_map: Vec<Biome>,
     // may want to use chunk status
 }
@@ -153,7 +153,7 @@ impl<'a> ProtoChunk<'a> {
         let surface_height_estimate_sampler =
             SurfaceHeightEstimateSampler::generate(base_router, &surface_config);
 
-        let default_block = BlockState::new(&settings.default_block.name).unwrap();
+        let default_block = ChunkBlockState::new(&settings.default_block.name).unwrap();
         Self {
             chunk_pos,
             settings,
@@ -163,7 +163,7 @@ impl<'a> ProtoChunk<'a> {
             multi_noise_sampler,
             surface_height_estimate_sampler,
             flat_block_map: vec![
-                BlockState::AIR;
+                ChunkBlockState::AIR;
                 CHUNK_DIM as usize * CHUNK_DIM as usize * height as usize
             ],
             flat_biome_map: vec![
@@ -187,21 +187,21 @@ impl<'a> ProtoChunk<'a> {
     }
 
     #[inline]
-    pub fn get_block_state(&self, local_pos: &Vector3<i32>) -> BlockState {
+    pub fn get_block_state(&self, local_pos: &Vector3<i32>) -> ChunkBlockState {
         let local_pos = Vector3::new(
             local_pos.x & 15,
             local_pos.y - self.noise_sampler.min_y() as i32,
             local_pos.z & 15,
         );
         if local_pos.y < 0 || local_pos.y >= self.noise_sampler.height() as i32 {
-            BlockState::AIR
+            ChunkBlockState::AIR
         } else {
             self.flat_block_map[self.local_pos_to_index(&local_pos)]
         }
     }
 
     #[inline]
-    pub fn set_block_state(&mut self, local_pos: &Vector3<i32>, block_state: BlockState) {
+    pub fn set_block_state(&mut self, local_pos: &Vector3<i32>, block_state: ChunkBlockState) {
         let local_pos = Vector3::new(
             local_pos.x & 15,
             local_pos.y - self.noise_sampler.min_y() as i32,
@@ -239,7 +239,7 @@ impl<'a> ProtoChunk<'a> {
         let start_z = biome_coords::from_block(start_z);
 
         for i in bottom..top {
-            let start_y = biome_coords::from_chunk(i as i32);
+            let start_y = biome_coords::from_chunk(i);
 
             for x in 0..4 {
                 for y in 0..4 {
