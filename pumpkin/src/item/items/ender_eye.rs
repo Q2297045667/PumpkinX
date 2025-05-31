@@ -43,10 +43,7 @@ impl PumpkinItem for EnderEyeItem {
                 props_vec.push((key.as_str(), value.as_str()));
             }
         }
-        let new_state_id = block
-            .from_properties(props_vec)
-            .unwrap()
-            .to_state_id(block);
+        let new_state_id = block.from_properties(props_vec).unwrap().to_state_id(block);
         world
             .set_block_state(&location, new_state_id, BlockFlags::empty())
             .await;
