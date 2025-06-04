@@ -13,7 +13,6 @@ use pumpkin_util::math::position::BlockPos;
 #[pumpkin_block("minecraft:end_portal")]
 pub struct EndPortalBlock;
 
-
 #[async_trait]
 impl PumpkinBlock for EndPortalBlock {
     async fn on_entity_collision(
@@ -30,9 +29,7 @@ impl PumpkinBlock for EndPortalBlock {
                 .get_world_from_dimension(DimensionType::Overworld)
                 .await
         } else {
-            server
-                .get_world_from_dimension(DimensionType::TheEnd)
-                .await
+            server.get_world_from_dimension(DimensionType::TheEnd).await
         };
         entity.get_entity().try_use_portal(0, world, pos).await;
     }
