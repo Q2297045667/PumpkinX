@@ -91,10 +91,6 @@ impl EndPortal {
     async fn create_portal(world: &Arc<World>, pos: BlockPos) {
         for x in -1..=1 {
             for z in -1..=1 {
-                log::info!(
-                    "Creating end portal at position: {:?}",
-                    pos.offset(Vector3::new(x, 0, z))
-                );
                 world
                     .set_block_state(
                         &pos.offset(Vector3::new(x, 0, z)),
