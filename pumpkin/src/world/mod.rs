@@ -27,7 +27,6 @@ use border::Worldborder;
 use bytes::{BufMut, Bytes};
 use explosion::Explosion;
 use pumpkin_config::BasicConfiguration;
-use pumpkin_data::{block_properties::get_block_collision_shapes, BlockDirection};
 use pumpkin_data::entity::EffectType;
 use pumpkin_data::fluid::{Falling, FluidProperties};
 use pumpkin_data::{
@@ -41,6 +40,7 @@ use pumpkin_data::{
     sound::{Sound, SoundCategory},
     world::{RAW, WorldEvent},
 };
+use pumpkin_data::{BlockDirection, block_properties::get_block_collision_shapes};
 use pumpkin_macros::send_cancellable;
 use pumpkin_nbt::{compound::NbtCompound, to_bytes_unnamed};
 use pumpkin_protocol::client::play::{
@@ -1575,7 +1575,7 @@ impl World {
                         }
                     })
             })
-        .unwrap_or(Err(GetBlockError::InvalidBlockId))
+            .unwrap_or(Err(GetBlockError::InvalidBlockId))
     }
 
     pub async fn get_block_state_id(&self, position: &BlockPos) -> BlockStateId {
@@ -1743,7 +1743,7 @@ impl World {
         chunk.dirty = true;
     }
 
-        fn intersects_aabb_with_direction(
+    fn intersects_aabb_with_direction(
         from: Vector3<f64>,
         to: Vector3<f64>,
         min: Vector3<f64>,
@@ -1848,8 +1848,7 @@ impl World {
 
         let mut block = BlockPos::floored(from.x, from.y, from.z);
 
-        let (collision, direction) =
-            self.block_collision_check(&block, from, to).await;
+        let (collision, direction) = self.block_collision_check(&block, from, to).await;
         if let Some(dir) = direction {
             if collision {
                 return Some((block, dir));
@@ -1931,8 +1930,7 @@ impl World {
             };
 
             if hit_check(&block, self).await {
-                let (collision, direction) =
-                    self.block_collision_check(&block, from, to).await;
+                let (collision, direction) = self.block_collision_check(&block, from, to).await;
                 if collision {
                     if let Some(dir) = direction {
                         return Some((block, dir));

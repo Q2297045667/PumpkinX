@@ -87,15 +87,14 @@ pub trait FlowingFluid {
         if let Some(properties) = block.properties(state_id) {
             if properties
                 .to_props()
-                    .iter()
-                    .any(|(key, value)| key == "waterlogged" && value == "true")
+                .iter()
+                .any(|(key, value)| key == "waterlogged" && value == "true")
             {
                 return Some(state_id);
             }
         }
         None
     }
-
 
     fn is_same_fluid(&self, fluid: &Fluid, other_state_id: BlockStateId) -> bool {
         if let Some(other_fluid) = Fluid::from_state_id(other_state_id) {
@@ -224,7 +223,8 @@ pub trait FlowingFluid {
         let above_state_id = world.get_block_state_id(&above_pos).await;
 
         if self.is_same_fluid(fluid, above_state_id)
-          || self.is_waterlogged(world, &above_pos).await.is_some() {
+            || self.is_waterlogged(world, &above_pos).await.is_some()
+        {
             return Some(self.get_flowing(fluid, Level::L8, true).await);
         }
 
