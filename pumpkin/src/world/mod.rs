@@ -40,7 +40,7 @@ use pumpkin_data::{
     sound::{Sound, SoundCategory},
     world::{RAW, WorldEvent},
 };
-use pumpkin_data::{BlockDirection, block_properties::get_block_collision_shapes};
+use pumpkin_data::{BlockDirection, block_properties::get_block_outline_shapes};
 use pumpkin_macros::send_cancellable;
 use pumpkin_nbt::{compound::NbtCompound, to_bytes_unnamed};
 use pumpkin_protocol::client::play::{
@@ -1811,7 +1811,7 @@ impl World {
         let state_id = self.get_block_state_id(block_pos).await;
         //TODO this should use bounding boxes instead of collision shapes
         // But currently we don't have a way to get all the bounding boxes of a block
-        let Some(collision_shapes) = get_block_collision_shapes(state_id) else {
+        let Some(collision_shapes) = get_block_outline_shapes(state_id) else {
             return (false, None);
         };
 

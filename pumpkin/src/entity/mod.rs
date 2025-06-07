@@ -6,7 +6,7 @@ use crossbeam::atomic::AtomicCell;
 use living::LivingEntity;
 use player::Player;
 use pumpkin_data::{
-    block_properties::{Facing, HorizontalFacing},
+    block_properties::{Facing, HorizontalFacing, get_block_outline_shapes},
     damage::DamageType,
     entity::{EntityPose, EntityType},
     sound::{Sound, SoundCategory},
@@ -648,15 +648,49 @@ impl Entity {
                 for z in blockpos.0.z..=blockpos1.0.z {
                     let pos = BlockPos::new(x, y, z);
                     let (block, state) = world.get_block_and_block_state(&pos).await;
-                    world
-                        .block_registry
-                        .on_entity_collision(block, &world, entity, pos, state, server)
-                        .await;
-                    if let Ok(fluid) = world.get_fluid(&pos).await {
+                    let block_outlines = get_block_outline_shapes(state.id);
+
+                    if let Some(outlines) = block_outlines {
+                        if outlines.is_empty() {
+                            world
+                                .block_registry
+                                .on_entity_collision(block, &world, entity, pos, state, server)
+                                .await;
+                            if let Ok(fluid) = world.get_fluid(&pos).await {
+                                world
+                                    .block_registry
+                                    .on_entity_collision_fluid(&fluid, entity)
+                                    .await;
+                            }
+                            continue;
+                        }
+                        for outline in outlines {
+                            let outline_aabb = outline.at_pos(pos);
+                            if outline_aabb.intersects(&aabb) {
+                                world
+                                    .block_registry
+                                    .on_entity_collision(block, &world, entity, pos, state, server)
+                                    .await;
+                                if let Ok(fluid) = world.get_fluid(&pos).await {
+                                    world
+                                        .block_registry
+                                        .on_entity_collision_fluid(&fluid, entity)
+                                        .await;
+                                }
+                                break;
+                            }
+                        }
+                    } else {
                         world
                             .block_registry
-                            .on_entity_collision_fluid(&fluid, entity)
+                            .on_entity_collision(block, &world, entity, pos, state, server)
                             .await;
+                        if let Ok(fluid) = world.get_fluid(&pos).await {
+                            world
+                                .block_registry
+                                .on_entity_collision_fluid(&fluid, entity)
+                                .await;
+                        }
                     }
                 }
             }
