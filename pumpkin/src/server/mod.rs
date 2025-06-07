@@ -154,13 +154,13 @@ impl Server {
             DimensionType::TheNether,
             block_registry.clone(),
         );
-        // log::info!("Loading End: {}", seed);
-        // let end = World::load(
-        //     Dimension::End.into_level(world_path.clone(), seed),
-        //     level_info.clone(),
-        //     DimensionType::TheEnd,
-        //     block_registry.clone(),
-        // );
+        log::info!("Loading End: {seed}");
+        let end = World::load(
+            Dimension::End.into_level(world_path.clone(), block_registry.clone(), seed),
+            level_info.clone(),
+            DimensionType::TheEnd,
+            block_registry.clone(),
+        );
 
         // if we fail to lock, lets crash ???. maybe not the best solution when we have a large server with many worlds and one is locked.
         // So TODO
@@ -171,7 +171,7 @@ impl Server {
         Self {
             cached_registry: Registry::get_synced(),
             container_id: 0.into(),
-            worlds: RwLock::new(vec![Arc::new(overworld), Arc::new(nether)]),
+            worlds: RwLock::new(vec![Arc::new(overworld), Arc::new(nether), Arc::new(end)]),
             dimensions: vec![
                 DimensionType::Overworld,
                 DimensionType::OverworldCaves,
@@ -230,7 +230,7 @@ impl Server {
         let world = match dimension {
             DimensionType::Overworld => world_guard.first(),
             DimensionType::OverworldCaves => todo!(),
-            DimensionType::TheEnd => todo!(),
+            DimensionType::TheEnd => world_guard.get(2),
             DimensionType::TheNether => world_guard.get(1),
         };
         world.cloned().unwrap()
