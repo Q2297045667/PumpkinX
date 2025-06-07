@@ -1807,24 +1807,23 @@ impl World {
         }
     }
 
-    pub async fn block_collision_check(
+    async fn ray_outline_check(
         self: &Arc<Self>,
         block_pos: &BlockPos,
         from: Vector3<f64>,
         to: Vector3<f64>,
     ) -> (bool, Option<BlockDirection>) {
         let state_id = self.get_block_state_id(block_pos).await;
-        //TODO this should use bounding boxes instead of collision shapes
-        // But currently we don't have a way to get all the bounding boxes of a block
-        let Some(collision_shapes) = get_block_outline_shapes(state_id) else {
+
+        let Some(bounding_boxes) = get_block_outline_shapes(state_id) else {
             return (false, None);
         };
 
-        if collision_shapes.is_empty() {
+        if bounding_boxes.is_empty() {
             return (true, None);
         }
 
-        for shape in &collision_shapes {
+        for shape in &bounding_boxes {
             let world_min = shape.min.add(&block_pos.0.to_f64());
             let world_max = shape.max.add(&block_pos.0.to_f64());
 
@@ -1853,7 +1852,7 @@ impl World {
 
         let mut block = BlockPos::floored(from.x, from.y, from.z);
 
-        let (collision, direction) = self.block_collision_check(&block, from, to).await;
+        let (collision, direction) = self.ray_outline_check(&block, from, to).await;
         if let Some(dir) = direction {
             if collision {
                 return Some((block, dir));
@@ -1935,7 +1934,7 @@ impl World {
             };
 
             if hit_check(&block, self).await {
-                let (collision, direction) = self.block_collision_check(&block, from, to).await;
+                let (collision, direction) = self.ray_outline_check(&block, from, to).await;
                 if collision {
                     if let Some(dir) = direction {
                         return Some((block, dir));
